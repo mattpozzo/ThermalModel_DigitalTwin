@@ -1,0 +1,17 @@
+termico = M (main)
+funciones_termico = F
+
+· M 23: le está sacando la primera columna a df? por qué?
+· M 47-48: qué está pasando?
+· F 82: calcula una matriz alfa·A, pero en 78 calcula una matriz epsilon (sin A); en M multiplica la matriz epsilon por A así que las operaciones terminan estando bien, pero podría unificarse en con o sin A en la definición
+· F 86: OJO no multiplica A con rho (como debería), sino que lo eleva!
+· F 97-99: qué está pasando? 
+· F 103: qué está pasando?
+· F 104-114: qué está pasando?
+· F 130-136: qué está pasando?
+· M 63-74: sería más lógico desde la definición que si la simulacióón converge, converge=1 (no 0)
+· M 76: definición innecesaria? total lo vuelve a definir en 85
+· M 91-94: dice que cada nodo tendrá su disipación operativa durante la primera mitad de la órbita, y la no-op durante la segunda? (posible código de relleno)
+· M 103: de dónde sale ese número tan exacto?
+· M 111: qué está pasando?
+· F 36: dice que la temperatura está en °C y todo el programa trabaja en K (igual nunca usan este atributo ni en M ni en F)
