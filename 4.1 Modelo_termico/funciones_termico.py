@@ -18,7 +18,7 @@ class Nodos:
       
     # Properties of node
     self.ID = node[0]                                 # Identification
-    self.type = node[1]                               # Arithmetic or Difussion
+    self.type = node[1]                               # Arithmetic or Diffusion
     self.x = float(node[2])                           # metros
     self.y = float(node[3])                           # metros
     self.z = float(node[4])                           # metros
@@ -37,7 +37,7 @@ class Nodos:
     self.density = float(node[15])                    # Density in kg/m3
     self.Q = float(node[16])                          # Heat Capacity J/kgK
     self.k = float(node[17])                          # Conductivity W/mK
-    self.a = float(node[18])                          # Absortivity
+    self.a = float(node[18])                          # Absorptivity
     self.e = float(node[19])                          # Emissivity
     
 def matrices(Nodo):
@@ -51,7 +51,7 @@ def matrices(Nodo):
         
     Function
     ---------
-    Thermal coeficients matrix for each node.
+    Thermal coefficients matrix for each node.
     
     Parameters
     ---------
@@ -74,29 +74,29 @@ def matrices(Nodo):
     
     for i in range(0,num):
         # Step 1: Emissivity vector. 
-            # Select from node properties and apend to vector.
+            # Select from node properties and append to vector.
         emisividad_node.append(Nodo[i].e)
         
         # Step 2: Absorptivity vector. 
-            # Select from node properties absorption and Area in [m], multiply and apend to vector.
+            # Select from node properties absorption and Area in [m], multiply and append to vector.
         matrix_q.append(Nodo[i].a*Nodo[i].A/1000**2)
         
         # Step 3: Heat capacity vector. 
             # Select from node properties and solve: Mass [kg] * Specific heat [J kg^-1 K^-1]
-        mass_Cp.append(Nodo[i].A**Nodo[i].density*Nodo[i].espesor/1000**3*Nodo[i].Q)
+        mass_Cp.append(Nodo[i].A*Nodo[i].density*Nodo[i].espesor/1000**3*Nodo[i].Q)
         
         # Step 4: Conductance Matrix. 
-            # In node structure we have two types of node: Arithmetic or Difussion
+            # In node structure we have two types of node: Arithmetic or Diffusion
             # Arithmetic is used as intermediate step for calculation of conductance 
-            # between two Difussion nodes. It represents changes on material or change 
+            # between two Diffusion nodes. It represents changes on material or change
             # in path.
-            # The conductance matrix only show conductance between difussion nodes.
+            # The conductance matrix only show conductance between diffusion nodes.
         for j in range(0,num):
             if i == j:
                 matrix_G.append(0)
             elif sum(Nodo[i].contact-1 == j) > 0:
                 L = ((Nodo[i].x-Nodo[j].x)**2+(Nodo[i].y-Nodo[j].y)**2+(Nodo[i].z-Nodo[j].z)**2)**0.5/1000
-                matrix_G.append((areas(Nodo, i, j, L)*max(Nodo[i].espesor,Nodo[i].espesor)*max(Nodo[i].k,Nodo[j].k))/(L*1000**3))  
+                matrix_G.append((areas(Nodo, i, j, L)*max(Nodo[i].espesor,Nodo[j].espesor)*max(Nodo[i].k,Nodo[j].k))/(L*1000**3))
             else:
                 matrix_G.append(0)
     
