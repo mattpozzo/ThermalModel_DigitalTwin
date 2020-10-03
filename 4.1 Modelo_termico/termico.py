@@ -30,10 +30,10 @@ R_earth = 6378.1363                 # [km] Radio de la Tierra
 params = (mu_earth,)
 stef_boltz = 5.670373e-8            # [W m^-2 K^-4] Stefan-Boltzman
 
-# Input 3: Simulator Settings (This settings will be passed by the master algorithm)
+# Input 3: Simulator Settings (These settings will be passed by the master algorithm)
 t0 = 0                              # [sec] Tiempo inicial de simulacion
 dt = 1                              # [sec] Paso del integrador
-tf = 94.2 * 60                      # [sec] Tiempo final de simulacion
+tf = 94.2 * 60                      # [sec] Tiempo final de simulacion  REEMPLAZAR 94.2 POR VAR PERIODO
 iterations = int((tf - t0)/dt) + 1  # Numero de puntos por orbita
 orbits = 1                          # Cantidad de órbitas
 
@@ -49,7 +49,7 @@ for i in range(0,df.index[-1]+1):
 
 num = len(Nodo) # Number of nodes
 
-# Ver en funciones_termico cómo es la clase Nodos. Cada nodo además de tener un ID, 
+# Ver en funciones_termico cómo es la clase Nodos. Cada nodo además de tener un ID,
 # tiene asignada una parte, por ejemplo "Acople Al" o "PCB Nadir". Esto es para que
 # cuando expandamos la cantidad de nodos, podamos seleccionar todos los nodos de una
 # pieza para algo en particular (no se qué todavía).
@@ -61,19 +61,18 @@ emisividad_node, matrix_G, matrix_q, mass_Cp = f.matrices(Nodo)
 
 
 #Step 3: Convergence analysis
-converge = 0
+converge = 1
 for i in range(num):
     if dt / (mass_Cp[i] * Nodo[i].A) > 0.6:
-        converge = 1
+        converge = 0
     #print(D_t / (mass_Cp[i] * Nodo[i].A))
         
-if converge == 1:
+if converge == 0:
     print('No Converge')
 else:
     print('Converge') 
 del converge
 
-j=0 # Variable auxiliar
 T_list = np.zeros(16) # Lista de evolución de temperaturas para graficar.
 cargas_externas, conduccion, radiacion, carga_interna = 0,0,0,0 # Inicializo las variables
 
@@ -128,7 +127,7 @@ for j in range(0, iterations*orbits): # Loop para cada instante de tiempo.
             # Hay que ver la forma de automatizar esto, que puedas ingresar qué nodo es constante como
             # input, porque sino cada vez que haya que agregar una condición de contorno va a ser una paja.
         if Nodo[i].part == 'Acople Al':
-            T[i] = 3+273
+            T[i] = 3+273    # ESTá BIEN, ES LA T CONTORNO (DEL SAT)
         else:
             # Step 6: Cálculo del cambio de temperatura para el nodo.
             T[i] += acumulado_n * dt / mass_Cp[i] # Temp del nodo i para una posición orbital j.
@@ -155,7 +154,7 @@ T_list = T_list.reshape(tupla)
 np.linspace(0, 180, int(iterations/2))
 
 nu = np.linspace(0, 360, int(iterations))
-plt.plot(nu, T_list[1:,:]-273);
+plt.plot(nu, T_list[1:,:]-273)
 plt.xlabel("v [deg]", labelpad=15, fontsize=12, color="#333533")
 plt.ylabel("T [°C]", labelpad=15, fontsize=12, color="#333533")
 plt.title('T of Nodes vs True Anomally')
