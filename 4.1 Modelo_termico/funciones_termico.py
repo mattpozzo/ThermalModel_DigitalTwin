@@ -29,7 +29,7 @@ class Nodos:
     self.Qnop = float(node[9])                        # Generated heat - Non Operative
     self.Qop = float(node[10])                        # Generated heat - Operative
     self.P = node[11]                                 # power domain
-    self.contact = np.array(node[12].strip('][').split(', ')).astype(np.float)   # Nodes in contact with this node
+    self.contact = np.array(node[12].split(',')).astype(float)   # Nodes in contact with this node
     
     # Properties of material
     self.material = node[13]                          # Material's name
@@ -79,7 +79,7 @@ def matrices(Nodo):
         
         # Step 2: Absorptivity vector. 
             # Select from node properties absorption and Area in [m], multiply and append to vector.
-        matrix_q.append(Nodo[i].a*Nodo[i].A/1000**2)
+        matrix_q.append(Nodo[i].a)
         
         # Step 3: Heat capacity vector. 
             # Select from node properties and solve: Mass [kg] * Specific heat [J kg^-1 K^-1]
