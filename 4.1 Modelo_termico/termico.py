@@ -21,11 +21,13 @@ import funciones_termico as f
 # ToDo          - Ver cómo generar los vectores T_SC y T_rad para todo tiempo j.
 # ToDo          - Cambiar nombre de partes de nodos de contorno en .csv a las que figuran acá.
 
-def mainT(t0: float, orb: int, dt: float, per: float, sun_q: np.ndarray, alb: np.ndarray):
+def mainT(t0: float, orb: int, dt: float, per: float, sun_q: np.array, sun_b: np.ndarray, alb: np.ndarray):
     # t0:   Tiempo inicial de simulación [sec]
     # orb:  Cantidad de órbitas a simular [#]
     # dt:   Paso del integrador [sec]
     # per:  Período orbital [min]
+    # sun_q:    Array de ángulos entre nadir y vector solar [rad]
+    # sun_b:    Array de ángulos entre nadir y vector solar [rad]
     # alb:  Array de factores de albedo para cada t (output de Modelo de Albedo)
 
     # Input
@@ -79,14 +81,9 @@ def mainT(t0: float, orb: int, dt: float, per: float, sun_q: np.ndarray, alb: np
     converge = 1
     for i in range(num):
         if dt / (mass_Cp[i] * Nodo[i].A) > 0.6:
-            converge = 0
-        # print(D_t / (mass_Cp[i] * Nodo[i].A))
-
-    if converge == 0:
-        print('No Converge')
-    else:
-        print('Converge')
-    del converge
+            print('No converge')
+        else:
+            print('Converge')
 
     # La ecuación que se resuelve es:
     #     "calor acumulado en el nodo n = cargas_externas + conduccion + radiacion + carga_interna"
@@ -108,17 +105,16 @@ def mainT(t0: float, orb: int, dt: float, per: float, sun_q: np.ndarray, alb: np
             # La idea es que acá esté el modelo de cargas externas, incluyendo el de albedo.
             # Hay que buscar la forma de automatizar el cálculo de sombras para una órbita.
             # Actualmente puse que en la mitad de la órbita haya sombra y en la otra mitad sol.
-            # Y que la radiación solo le da al nodo "Payload".
-            if j / iterations - int(j / iterations) < 0.5:
-                if Nodo[i].part == 'Payload':
+            # Y que la radiación solo le da a los nodos externos.
+            cargas_externas = 0
+            if Nodo[i].ext:
+                carga_inf = emisividad_node[i] * Nodo[i].A / 1000 ** 2 * stef_boltz * T_earth ** 4 # AGREGAR F VISTA
+                carga_sun = 0
+                carga_alb = 0
+                if j / iterations - int(j / iterations) < 0.5:  # CAMBIAR
                     carga_sun = matrix_q[i] * Nodo[i].A / 1000 ** 2 * sun_q[j]          # AGREGAR F VISTA
                     carga_alb = matrix_q[i] * Nodo[i].A / 1000 ** 2 * sun_q[j] * alb[j] # AGREGAR F VISTA
-                    carga_inf = emisividad_node[i] * Nodo[i].A / 1000 ** 2 * stef_boltz * T_earth ** 4 # AGREGAR F VISTA
-                    cargas_externas = carga_sun + carga_alb + carga_inf
-                else:
-                    cargas_externas = 0
-            else:
-                cargas_externas = 0
+                cargas_externas = carga_sun + carga_alb + carga_inf
 
             # Step 3: Cálculo del calor por conducción
             # Se calcula el balance entre el calor transmitido a otros nodos y el recibido.
