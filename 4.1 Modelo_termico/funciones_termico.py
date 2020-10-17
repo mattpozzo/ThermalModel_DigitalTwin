@@ -39,6 +39,7 @@ class Nodos:
     self.k = float(node[17])                          # Conductivity W/mK
     self.a = float(node[18])                          # Absorptivity
     self.e = float(node[19])                          # Emissivity
+    self.ext = bool(node[20])                         # External if true
     
 def matrices(Nodo):
     """
@@ -96,7 +97,7 @@ def matrices(Nodo):
                 matrix_G.append(0)
             elif sum(Nodo[i].contact-1 == j) > 0:
                 L = ((Nodo[i].x-Nodo[j].x)**2+(Nodo[i].y-Nodo[j].y)**2+(Nodo[i].z-Nodo[j].z)**2)**0.5/1000
-                matrix_G.append((areas(Nodo, i, j, L)*max(Nodo[i].espesor,Nodo[j].espesor)*max(Nodo[i].k,Nodo[j].k))/(L*1000**3))
+                matrix_G.append((0.5 ** 3 * (Nodo[i].A+Nodo[j].A) * (Nodo[i].espesor+Nodo[j].espesor) * (Nodo[i].k+Nodo[j].k))/(L*1000**3))
             else:
                 matrix_G.append(0)
     
@@ -126,14 +127,6 @@ def matrices(Nodo):
     mass_Cp[where_are_NaNs] = 0
     
     return emisividad_node, G, matrix_q, mass_Cp
-
-def areas(Nodo, i, j, L):
-    A = max(Nodo[i].A, Nodo[j].A)
-    e = max(Nodo[i].e, Nodo[j].e)
-    if A > 100:
-        return A*e/L
-    else:
-        return A
 
 def grafics_TvsNu(tupla, T_list):
     
