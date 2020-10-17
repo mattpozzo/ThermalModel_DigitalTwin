@@ -1,0 +1,31 @@
+termico = M (main)
+funciones_termico = F
+
+· M 23: le está sacando la primera columna a df? por qué?
+	saca la primera columna index, que se pone sola en el grabado del DF (en la descarga del excel del drive como csv).
+· M 47-48: qué está pasando?
+	carga a los nodos las filas del csv. VER que en el csv los contactos están cargados en columnas distintas, pero debería ser en una sola para simplificar. IMPLEMENTAR ESO.
+· F 82: calcula una matriz alfa·A, pero en 78 calcula una matriz epsilon (sin A); en M multiplica la matriz epsilon por A así que las operaciones terminan estando bien, pero podría unificarse en con o sin A en la definición
+	IMPLEMENTAR: multiplicar absortividades por A en el main (sacar la multiplicación en funciones_termico).
+· F 86: OJO no multiplica A con rho (como debería), sino que lo eleva!
+	YA ESTA CORREGIDO
+· F 97-99: qué está pasando?
+	hace la matriz de conductancia, y con el for recorre los nodos. primer caso: mismo nodo, así que da 0 (es la diagonal). segundo caso: resta 1 porque el nodo n está en la posición n-1 de la lista; L es la distancia (norma, checkear); saca el máximo, pero capaz debería ser el promedio (pesado) de los espesores y las conductividades de cada nodo (IMPLEMENTAR MEJOR). tercer caso, no hay contacto, 0.
+· F 103: qué está pasando?
+	pasa el append larguísimo que creó antes a una matriz
+· F 104-114: qué está pasando?
+	CAMBIAR 16x16 por la cantidad de nodos de difusión (input); CAMBIAR range a que arranque en 0; ordena numericamente los nodos con los que está en contacto un nodo; la 110 calcula la conductancia total entre nodos de difusión. IMPLEMENTAR que lo haga automático con la cantidad de nodos de contacto, que no se limite a 2.
+· F 130-136: qué está pasando?
+	no se acuerda, está raro, repensar cómo se IMPLEMENTA esto y la línea 99.
+· M 63-74: sería más lógico desde la definición que si la simulacióón converge, converge=1 (no 0)
+	CORREGIDO
+· M 76: definición innecesaria? total lo vuelve a definir en 85
+	CORREGIDO
+· M 91-94: dice que cada nodo tendrá su disipación operativa durante la primera mitad de la órbita, y la no-op durante la segunda? (posible código de relleno)
+	es relleno, IMPLEMENTAR con conops verdadero (los 10min de operación, etc.)
+· M 103: de dónde sale ese número tan exacto?
+	es del albedo, debería IMPLEMENTARSE para que lo calcule. tener en cuenta que el albedo depende no solo de la posición de la órbita, sino de la actitud del satélite.
+· M 111: qué está pasando?
+	el sumando es el aporte de temperatura de cada nodo al i, y el restando es el aporte de i a los demás nodos
+· F 36: dice que la temperatura está en °C y todo el programa trabaja en K (igual nunca usan este atributo ni en M ni en F)
+	el atributo temp solo sirve como referencia de que las propiedades del material son para esa temperatura (no se usa en el código)
