@@ -18,7 +18,7 @@ class Nodos:
       
     # Properties of node
     self.ID = node[0]                                 # Identification
-    self.type = node[1]                               # Arithmetic or Diffusion
+    self.type = node[1]                               # Arithmetic, Diffusion o Contorno
     self.x = float(node[2])                           # metros
     self.y = float(node[3])                           # metros
     self.z = float(node[4])                           # metros
@@ -60,7 +60,7 @@ def matrices(Nodo):
     
     Returns
     ---------
-        emisividad_node: Radiation emissivity for each node. Vector [1xn]
+        matrix_e: Radiation emissivity for each node. Vector [1xn]
         G: Conductance matrix between nodes [nxn]
         matrix_q: Absorptivity matrix [1xn]
         mass_Cp: Heat Capacity por each node [1xn]
@@ -68,7 +68,7 @@ def matrices(Nodo):
     
     num = len(Nodo)
     
-    emisividad_node = []
+    matrix_e = []
     matrix_G = []
     matrix_q = []
     mass_Cp = []
@@ -76,7 +76,7 @@ def matrices(Nodo):
     for i in range(0,num):
         # Step 1: Emissivity vector. 
             # Select from node properties and append to vector.
-        emisividad_node.append(Nodo[i].e)
+        matrix_e.append(Nodo[i].e)
         
         # Step 2: Absorptivity vector. 
             # Select from node properties absorption and Area in [m], multiply and append to vector.
@@ -102,8 +102,8 @@ def matrices(Nodo):
                 matrix_G.append(0)
     
     matrix_G = np.array(matrix_G).reshape(num,num)
-    G = np.zeros([16,16]) 
-    for i in range(16,num):
+    G = np.zeros([32,32])
+    for i in range(0,num):
         if Nodo[i].type == 'A':
             filter_arr = np.isfinite(Nodo[i].contact)
             virtual_node = i
@@ -114,9 +114,9 @@ def matrices(Nodo):
                 G[int(nodes_cont[1]),int(nodes_cont[2])] = 1/(1/matrix_G[int(nodes_cont[1])][virtual_node] + 1/matrix_G[int(nodes_cont[2])][virtual_node])
                 G[int(nodes_cont[2]), int(nodes_cont[1])] = G[int(nodes_cont[1]),int(nodes_cont[2])]
     
-    emisividad_node = np.array(emisividad_node)
-    where_are_NaNs = np.isnan(emisividad_node)
-    emisividad_node[where_are_NaNs] = 0
+    matrix_e = np.array(matrix_e)
+    where_are_NaNs = np.isnan(matrix_e)
+    matrix_e[where_are_NaNs] = 0
     
     matrix_q = np.array(matrix_q)
     where_are_NaNs = np.isnan(matrix_q)
@@ -126,7 +126,7 @@ def matrices(Nodo):
     where_are_NaNs = np.isnan(mass_Cp)
     mass_Cp[where_are_NaNs] = 0
     
-    return emisividad_node, G, matrix_q, mass_Cp
+    return matrix_e, G, matrix_q, mass_Cp
 
 def grafics_TvsNu(tupla, T_list):
     
