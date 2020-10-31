@@ -17,25 +17,27 @@ from scipy.integrate import odeint
 
 import funciones_termico as f
 
-# ToDo actual:  - Revisar configuración de tiempo de simulación y puntos simulados.
-# ToDo          - Ver cómo generar los vectores T_SC y T_rad para todo tiempo j.
-# ToDo          - Cambiar nombre de partes de nodos de contorno en .csv a las que figuran acá.
+# ToDo actual:  - Agregar nodos de contorno a .csv
+# ToDo          - Ver cómo determinar la carga solar para cada distancia sat-sol; implementar en cálculo de flujo incidente
 
-def mainT(t0: float, orb: int, dt: float, per: float, sun_q: np.array, sun_b: np.ndarray, alb: np.ndarray):
-    # t0:   Tiempo inicial de simulación [sec]
-    # orb:  Cantidad de órbitas a simular [#]
-    # dt:   Paso del integrador [sec]
-    # per:  Período orbital [min]
-    # sun_q:    Array de ángulos entre nadir y vector solar [rad]
-    # sun_b:    Array de ángulos entre nadir y vector solar [rad]
-    # alb:  Array de factores de albedo para cada t (output de Modelo de Albedo)
+def mainT(t: float, dt: float, alb: float, nad_rad: float, nad_sun: float, onoff: bool, umbra: bool, T=None, matrix_e=None, matrix_G=None, matrix_q=None, mass_Cp=None, Nodo=None):
+    # t:            Tiempo actual de simulación [sec]
+    # dt:           Paso del integrador [sec]
+    # iterations:   Cantidad de puntos en una órbita [#]
+    # orb:          Cantidad de órbitas a simular [#]
+    # alb:          Factor de albedo del paso actual [ ]
+    # nad_rad:      Ángulo entre nadir y vector radial a la Tierra [rad]
+    # nad_sun:      Ángulo entre nadir y vector solar [rad]
+    # onoff:        Lista de bools de largo num, donde True indica un nodo operativo, y False uno no operativo
+    # umbra:        True dentro de la umbra de la órbita, False fuera de la umbra
+    # T:            Array de temperaturas nodales del paso actual [K]
+    # matrix_e:     Lista de emisividades nodales [ ]
+    # matrix_G:     Matriz de conductancias entre nodos [W/mK]
+    # matrix_q:     Lista de absortividades nodales [ ]
+    # mass_Cp:      Lista de masas térmicas nodales [J/K]
+    # Nodo:         Lista de nodos (con sus características)
 
     # Input
-
-    # Input 1: Thermal Properties of materials
-    df = pd.read_csv('4.8 CSVs/physical_properties.csv')
-    # df.drop(['Unnamed: 0'], axis=1, inplace=True)
-    df
 
     # Input 2: Constants
     mu_earth = 398600.4415  # [km^3/sec^2] Parametro gravitacional
@@ -44,16 +46,6 @@ def mainT(t0: float, orb: int, dt: float, per: float, sun_q: np.array, sun_b: np
     params = (mu_earth,)
     stef_boltz = 5.670373e-8  # [W m^-2 K^-4] Stefan-Boltzman
 
-    # Input 3: Simulator Settings (These settings will be passed by the master algorithm)
-    tf = per * 60  # [sec] Tiempo final de simulacion
-    iterations = int((tf - t0) / dt) + 1  # Numero de puntos por orbita
-    orbits = orb  # Cantidad de órbitas
-
-    # Input 4: Initial conditions
-    T = np.ones(16) * 270  # Initial temperature
-
-    # Algorithm
-
     # Ver en funciones_termico cómo es la clase Nodos. Cada nodo además de tener un ID,
     # tiene asignada una parte, por ejemplo "Acople Al" o "PCB Nadir". Esto es para que
     # cuando expandamos la cantidad de nodos, podamos seleccionar todos los nodos de una
@@ -61,42 +53,58 @@ def mainT(t0: float, orb: int, dt: float, per: float, sun_q: np.array, sun_b: np
     # También, algunos tienen asignados componentes, para luego en el concepto de operaciones
     # se puedan prender o apagar estos nodos según el componente que tengan.
 
-    # Step 1: Nodes structure definition
-    Nodo = []
-    for i in range(0, df.index[-1]):
-        Nodo.append(f.Nodos(df[i:i + 1].values[0]))
-        print(Nodo[i].contact)
+    if Nodo is None:
+        # Input 1: Thermal Properties of materials
+        df = pd.read_csv('4.8 CSVs/physical_properties.csv')
+        # df.drop(['Unnamed: 0'], axis=1, inplace=True)
+
+        Nodo = []
+        for i in range(0, df.index[-1] + 1):
+            Nodo.append(f.Nodos(df[i:i + 1].values[0]))
 
     num = len(Nodo)  # Number of nodes
 
-    # Step 2: Define matrix from equation
-    emisividad_node, matrix_G, matrix_q, mass_Cp = f.matrices(Nodo)
+    if T is None:
+        T = np.ones(num) * 273.15  # Initial temperature
 
-    T_list = np.zeros(16)  # Lista de evolución de temperaturas para graficar.
+    if None in [matrix_e,matrix_G,matrix_q,mass_Cp]:
+        # Step 2: Define matrix from equation
+        matrix_e, matrix_G, matrix_q, mass_Cp = f.matrices(Nodo)
+
+    """
+    # Input 3: Simulator Settings (These settings will be passed by the master algorithm)
+    tf = per * 60  # [sec] Tiempo final de simulacion
+    iterations = int((tf - t0) / dt) + 1  # Numero de puntos por orbita
+    orbits = orb  # Cantidad de órbitas
+    """
+
+    # Algorithm
+
+    # T_list = np.zeros(16)  # Lista de evolución de temperaturas para graficar.
     cargas_externas, conduccion, radiacion, carga_interna = 0, 0, 0, 0  # Inicializo las variables
-    T_SC = np.zeros(iterations * orbits) + 3    # Vector de T(t) del spacecraft ToDo: Reemplazar por un vector de T(t) similar al del ICD
-    T_rad = np. zeros(iterations * orbits) - 10 # Vector de T(t) del radiador   ToDo: Reemplazar por un vector de T(t) similar al del ICD
 
     # Step 3: Convergence analysis
-    converge = 1
+    conv = 0
     for i in range(num):
-        if dt / (mass_Cp[i] * Nodo[i].A) > 0.6:
-            print('No converge')
-        else:
-            print('Converge')
+        if dt / (mass_Cp[i] * Nodo[i].A) > 0.6:     # Dato de Nahuel
+            conv += 1
+    if conv != 0:
+        print('No converge')
+    else:
+        print('Converge')
 
     # La ecuación que se resuelve es:
     #     "calor acumulado en el nodo n = cargas_externas + conduccion + radiacion + carga_interna"
     # Dentro del for se va resolviendo cada uno de los términos y se itera hasta llegar a un valor de
     # temperatura estable que haga que el calor acumulado sea 0.
 
-    for j in range(0, iterations * orbits):  # Loop para cada instante de tiempo.
-        for i in range(0, int(num / 2)):  # Se abre otro loop para que itera entre los N nodos.
+    for i in range(0, num):  # Se abre un loop que itera entre los N nodos
+        if Nodo[i].type != 'C':     # La evolución de T de los nodos de contorno es un input
 
             # Step 1: Concepto de operaciones
             # La idea es que acá se vayan encendiendo y apagando los componentes según el modelo de
             # experimento (Concepto de operaciones) y vaya cambiando la carga interna.
-            if j / iterations - int(j / iterations) < 0.5:
+            if onoff[i]:
                 carga_interna = Nodo[i].Qop
             else:
                 carga_interna = Nodo[i].Qnop
@@ -106,31 +114,32 @@ def mainT(t0: float, orb: int, dt: float, per: float, sun_q: np.array, sun_b: np
             # Hay que buscar la forma de automatizar el cálculo de sombras para una órbita.
             # Actualmente puse que en la mitad de la órbita haya sombra y en la otra mitad sol.
             # Y que la radiación solo le da a los nodos externos.
-            cargas_externas = 0
             if Nodo[i].ext:
-                carga_inf = emisividad_node[i] * Nodo[i].A / 1000 ** 2 * stef_boltz * T_earth ** 4 # AGREGAR F VISTA
+                carga_inf = matrix_e[i] * Nodo[i].A / 1000 ** 2 * stef_boltz * T_earth ** 4 # ToDo: AGREGAR F VISTA
                 carga_sun = 0
                 carga_alb = 0
-                if j / iterations - int(j / iterations) < 0.5:  # CAMBIAR
-                    carga_sun = matrix_q[i] * Nodo[i].A / 1000 ** 2 * sun_q[j]          # AGREGAR F VISTA
-                    carga_alb = matrix_q[i] * Nodo[i].A / 1000 ** 2 * sun_q[j] * alb[j] # AGREGAR F VISTA
+                if not umbra:
+                    pass
+                    # carga_sun = matrix_q[i] * Nodo[i].A / 1000 ** 2 * sun_q[j]        # ToDo: AGREGAR F VISTA e implementar sun_q
+                    # carga_alb = matrix_q[i] * Nodo[i].A / 1000 ** 2 * sun_q[j] * alb  # ToDo: AGREGAR F VISTA e implementar sun_q
                 cargas_externas = carga_sun + carga_alb + carga_inf
 
             # Step 3: Cálculo del calor por conducción
             # Se calcula el balance entre el calor transmitido a otros nodos y el recibido.
             conduccion = (matrix_G[i] * T).sum() - matrix_G[i].sum() * T[i]
 
-            # Step 4: Cálculo del calor por radiación
+            # Step 4: Cálculo del calor por radiación ToDo: Todo básicamente
             # Se calcula el balance entre la radiación emitida y la recibida del satélite y otros nodos.
             # Actualmente solo se libera radiación al ambiente como si estuviera cada nodo solo en el
             # espacio.
             # Hay que agregar un modelo de radiación entre nodos según geometría. Y agregar un nodo imaginario
             # que sea el satélite.
-            radiacion = - stef_boltz * emisividad_node[i] * Nodo[i].A * T[i] ** 4 / 1000 ** 2
+            radiacion = - stef_boltz * matrix_e[i] * Nodo[i].A * T[i] ** 4 / 1000 ** 2
 
             # Step 5: Calcular el acumulado.
             acumulado_n = cargas_externas + conduccion + radiacion + carga_interna
 
+            """
             # Step 6: Condiciones de contorno
             # En nuestro caso, el acople de aluminio va a estar en contacto con el radiador, asique
             # va a  tener su temperatura. Como está modelado como un nodo solo, la temperatura va a
@@ -142,9 +151,12 @@ def mainT(t0: float, orb: int, dt: float, per: float, sun_q: np.array, sun_b: np
             elif Nodo[i].part == 'Acople Rad':
                 T[i] = T_rad[j] + 273    # Temperatura del radiador
             else:
-                # Step 6: Cálculo del cambio de temperatura para el nodo.
-                T[i] += acumulado_n * dt / mass_Cp[i]  # Temp del nodo i para una posición orbital j.
+            """
 
+            # Step 6: Cálculo del cambio de temperatura para el nodo.
+            T[i] += acumulado_n * dt / mass_Cp[i]  # Temp del nodo i para una posición orbital j.
+
+"""
         # Concateno la temperatura de los N nodos para tiempo j, en la lista.
         T_list = np.concatenate((T_list, T), axis=0)
 
@@ -174,6 +186,7 @@ def mainT(t0: float, orb: int, dt: float, per: float, sun_q: np.array, sun_b: np
     plt.grid(True, color="#93a1a1", alpha=0.3)
 
     plt.show()
+"""
 
 # Algorithm...
 
