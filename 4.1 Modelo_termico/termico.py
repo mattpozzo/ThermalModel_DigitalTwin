@@ -18,13 +18,12 @@ from scipy.integrate import odeint
 import funciones_termico as f
 
 # ToDo actual:  - Agregar nodos de contorno a .csv
-# ToDo          - Ver cómo determinar la carga solar para cada distancia sat-sol; implementar en cálculo de flujo incidente
+# ToDo          - Agregar cálculo de factores de vista
 
-def mainT(t: float, dt: float, alb: float, nad_rad: float, nad_sun: float, onoff: bool, umbra: bool, T=None, matrix_e=None, matrix_G=None, matrix_q=None, mass_Cp=None, Nodo=None):
+def mainT(t: float, dt: float, r_sun: float, alb: float, nad_rad: float, nad_sun: float, onoff: bool, umbra: bool, T=None, matrix_e=None, matrix_G=None, matrix_q=None, mass_Cp=None, Nodo=None):
     # t:            Tiempo actual de simulación [sec]
     # dt:           Paso del integrador [sec]
-    # iterations:   Cantidad de puntos en una órbita [#]
-    # orb:          Cantidad de órbitas a simular [#]
+    # r_sun:        Distancia entre spacecraft y Sol [km]
     # alb:          Factor de albedo del paso actual [ ]
     # nad_rad:      Ángulo entre nadir y vector radial a la Tierra [rad]
     # nad_sun:      Ángulo entre nadir y vector solar [rad]
@@ -42,8 +41,9 @@ def mainT(t: float, dt: float, alb: float, nad_rad: float, nad_sun: float, onoff
     # Input 2: Constants
     mu_earth = 398600.4415  # [km^3/sec^2] Parametro gravitacional
     R_earth = 6378.1363  # [km] Radio de la Tierra
+    R_sun = 695700  # [km] Radio del Sol
     T_earth = 288.05  # [K] Temperatura promedio de la Tierra
-    params = (mu_earth,)
+    T_sun = 5772    # [K] Temperatura promedio del Sol
     stef_boltz = 5.670373e-8  # [W m^-2 K^-4] Stefan-Boltzman
 
     # Ver en funciones_termico cómo es la clase Nodos. Cada nodo además de tener un ID,
@@ -119,9 +119,9 @@ def mainT(t: float, dt: float, alb: float, nad_rad: float, nad_sun: float, onoff
                 carga_sun = 0
                 carga_alb = 0
                 if not umbra:
-                    pass
-                    # carga_sun = matrix_q[i] * Nodo[i].A / 1000 ** 2 * sun_q[j]        # ToDo: AGREGAR F VISTA e implementar sun_q
-                    # carga_alb = matrix_q[i] * Nodo[i].A / 1000 ** 2 * sun_q[j] * alb  # ToDo: AGREGAR F VISTA e implementar sun_q
+                    q_sun = stef_boltz * T_sun ** 4 * (R_sun / r_sun) ** 2
+                    carga_sun = matrix_q[i] * Nodo[i].A / 1000 ** 2 * q_sun        # ToDo: AGREGAR F VISTA
+                    carga_alb = matrix_q[i] * Nodo[i].A / 1000 ** 2 * q_sun * alb  # ToDo: AGREGAR F VISTA
                 cargas_externas = carga_sun + carga_alb + carga_inf
 
             # Step 3: Cálculo del calor por conducción
